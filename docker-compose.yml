@@ -39,7 +39,13 @@ services:
     container_name: valheim-webhook
     ports:
       # 6060 é o endereço que o hook do container de Valheim chama.
-      - "${HTTP_PORT:-6060}:6060"
+      #
+      # BIND_ADDR decide QUEM alcança essa porta, e o padrão é o mais aberto
+      # porque é o que funciona numa instalação caseira. Publicando num
+      # servidor com IP público, use o IP da ponte do Docker (`172.17.0.1`): o
+      # container do Valheim continua chegando por `host.docker.internal`, o
+      # proxy reverso chega pelo host, e a internet não chega.
+      - "${BIND_ADDR:-0.0.0.0}:${HTTP_PORT:-6060}:6060"
     environment:
       # --- banco (o host é o NOME DO SERVIÇO na rede do compose) ---
       VALHEIM_WEBHOOK_PG_HOST: postgres
@@ -80,5 +86,36 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # Proxy reverso com HTTPS automático. Só sobe com o perfil `proxy`:
+  #
+  #     docker compose --profile proxy up -d
+  #
+  # Fica atrás de um perfil porque a instalação caseira (acesso por
+  # http://ip-da-lan:6060) não precisa dele, e um container tentando emitir
+  # certificado para um domínio que não existe só produziria erro no log.
+  caddy:
+    image: caddy:2-alpine
+    container_name: valheim-webhook-caddy
+    profiles: ["proxy"]
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # Sem domínio não há o que servir — a falha precisa ser na subida, não
+      # numa página em branco depois.
+      PAINEL_DOMINIO: ${PAINEL_DOMINIO:?defina PAINEL_DOMINIO no .env para usar o perfil proxy}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Os certificados vivem em volume: sem isto, cada `docker compose up`
+      # pediria um certificado novo e bateria no limite do Let's Encrypt.
+      - valheim_webhook_caddy_data:/data
+      - valheim_webhook_caddy_config:/config
+    depends_on:
+      - app
+    restart: unless-stopped
+
 volumes:
   valheim_webhook_postgres:
+  valheim_webhook_caddy_data:
+  valheim_webhook_caddy_config:

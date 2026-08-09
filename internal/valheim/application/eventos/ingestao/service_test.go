@@ -223,7 +223,7 @@ func TestRegistrarLoteRecusaCorpoVazioEExcesso(t *testing.T) {
 	service, _, _ := montar(t, Registro{Tipo: tipoDesconhecido()}, Presenca{})
 
 	t.Run("lote só com linhas em branco", func(t *testing.T) {
-		_, err := service.RegistrarLote(context.Background(), []string{"", "   "})
+		_, _, err := service.RegistrarLote(context.Background(), []string{"", "   "})
 		assert.ErrorIs(t, err, ErrCorpoVazio)
 	})
 
@@ -232,7 +232,7 @@ func TestRegistrarLoteRecusaCorpoVazioEExcesso(t *testing.T) {
 		for i := range linhas {
 			linhas[i] = "Game server connected"
 		}
-		_, err := service.RegistrarLote(context.Background(), linhas)
+		_, _, err := service.RegistrarLote(context.Background(), linhas)
 		assert.ErrorIs(t, err, ErrLoteGrande)
 	})
 }

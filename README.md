@@ -173,9 +173,15 @@ HTTP_PORT=6060
 tiver de valer em **outros** subdomínios — não é o caso comum, e o valor vazio é
 o mais seguro.
 
-Atrás de um proxy reverso, publique a porta só no loopback (no
-`docker-compose.yml`: `"127.0.0.1:${HTTP_PORT:-6060}:6060"`) e deixe o proxy
-cuidar do TLS.
+Com `PAINEL_DOMINIO` preenchido, o `./iniciar.sh` sobe junto um **Caddy** que
+cuida do HTTPS sozinho (perfil `proxy` do compose, `deploy/Caddyfile`) —
+certificado emitido e renovado sem comando nenhum. Requisitos: o domínio
+resolvendo para esta máquina e as portas 80/443 livres.
+
+Se preferir seu próprio proxy, suba sem o perfil (`docker compose up -d`) e
+aponte-o para a porta publicada. Nos dois casos, use
+`BIND_ADDR=172.17.0.1`: assim a porta 6060 fica visível para o container do
+Valheim (`host.docker.internal`) e para o proxy, mas **não** para a internet.
 
 <details>
 <summary>nginx</summary>

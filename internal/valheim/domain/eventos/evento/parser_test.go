@@ -159,6 +159,71 @@ func TestAnalisarLeOCarimboDeHora(t *testing.T) {
 	})
 }
 
+// TestAnalisarLinhasReaisDoServidor usa linhas copiadas do log de um servidor
+// em produção (Valheim em `ghcr.io/community-valheim-tools/valheim-server`,
+// agosto de 2026), COM o prefixo do supervisor que o container encaminha.
+//
+// É o teste que pega a regressão que os casos sintéticos não pegam: o carimbo
+// de hora não está no começo da linha.
+func TestAnalisarLinhasReaisDoServidor(t *testing.T) {
+	const prefixo = "Aug  8 18:54:11 supervisord: valheim-server "
+
+	t.Run("entrada com prefixo do supervisor", func(t *testing.T) {
+		analise, err := Analisar(prefixo + "08/08/2026 18:54:11: Got character ZDOID from Espen Lindberg : 1353269051:18575")
+
+		require.NoError(t, err)
+		assert.Equal(t, TipoEntrou, analise.Tipo)
+		assert.Equal(t, "Espen Lindberg", analise.Jogador)
+		assert.Equal(t, "1353269051:18575", analise.ZDOID)
+		assert.Equal(t, "1353269051", analise.Dono)
+		assert.True(t, analise.TemHora, "a hora do JOGO precisa sobreviver ao prefixo")
+		assert.Equal(t,
+			time.Date(2026, 8, 8, 18, 54, 11, 0, time.Local).UTC(),
+			analise.OcorridoEm)
+	})
+
+	t.Run("nome com acento", func(t *testing.T) {
+		analise, err := Analisar(prefixo + "08/08/2026 19:19:54: Got character ZDOID from Gunnar Úlfhéðin : 1814428521:1")
+
+		require.NoError(t, err)
+		assert.Equal(t, TipoEntrou, analise.Tipo)
+		assert.Equal(t, "Gunnar Úlfhéðin", analise.Jogador)
+	})
+
+	t.Run("morte com prefixo", func(t *testing.T) {
+		analise, err := Analisar(prefixo + "08/08/2026 18:54:03: Got character ZDOID from Espen Lindberg : 0:0")
+
+		require.NoError(t, err)
+		assert.Equal(t, TipoMorreu, analise.Tipo)
+		assert.Equal(t, "Espen Lindberg", analise.Jogador)
+	})
+
+	t.Run("objeto abandonado traz o dono", func(t *testing.T) {
+		analise, err := Analisar(prefixo + "08/08/2026 19:23:29: Destroying abandoned non persistent zdo -53465420:2236 owner -53465420")
+
+		require.NoError(t, err)
+		assert.Equal(t, TipoSaiu, analise.Tipo)
+		assert.Equal(t, "-53465420:2236", analise.ZDOID)
+		assert.Equal(t, "-53465420", analise.Dono,
+			"é o dono que amarra as dezenas de linhas de uma saída a uma pessoa só")
+	})
+
+	t.Run("conexão", func(t *testing.T) {
+		analise, err := Analisar(prefixo + "08/08/2026 19:03:56: Got connection SteamID 76561198821824340")
+
+		require.NoError(t, err)
+		assert.Equal(t, TipoConexao, analise.Tipo)
+		assert.Equal(t, "76561198821824340", analise.SteamID)
+	})
+
+	t.Run("servidor no ar", func(t *testing.T) {
+		analise, err := Analisar(prefixo + "08/09/2026 05:10:26: Game server connected")
+
+		require.NoError(t, err)
+		assert.Equal(t, TipoServidorPronto, analise.Tipo)
+	})
+}
+
 // TestAnalisarRecusaLinhaVazia — é o único erro que o parser conhece.
 func TestAnalisarRecusaLinhaVazia(t *testing.T) {
 	for _, linha := range []string{"", "   ", "\n\t "} {

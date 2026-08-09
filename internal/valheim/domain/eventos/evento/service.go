@@ -30,13 +30,18 @@ type Service interface {
 }
 
 type serviceImpl struct {
-	repo  Repository
-	agora func() time.Time
+	repo      Repository
+	supressor *supressorDeSaidas
+	agora     func() time.Time
 }
 
 // NewService monta o serviço sobre o repositório.
 func NewService(repo Repository) Service {
-	return &serviceImpl{repo: repo, agora: func() time.Time { return time.Now().UTC() }}
+	return &serviceImpl{
+		repo:      repo,
+		supressor: novoSupressor(JanelaDeSaida),
+		agora:     func() time.Time { return time.Now().UTC() },
+	}
 }
 
 // Registrar é o caminho por onde TUDO entra.
@@ -64,6 +69,18 @@ func (s *serviceImpl) Registrar(ctx context.Context, servidor, linha string) (*E
 	ocorridoEm := s.agora()
 	if analise.TemHora {
 		ocorridoEm = analise.OcorridoEm
+	}
+
+	// Entrar cancela a supressão da saída anterior: sem isto, quem sai e volta
+	// dentro da janela teria a saída SEGUINTE engolida.
+	if analise.Tipo == TipoEntrou {
+		s.supressor.Esquecer(analise.Dono)
+	}
+
+	// A enxurrada de saídas do Valheim (uma linha por objeto abandonado) vira
+	// UM evento. Ver o comentário do supressor.
+	if analise.Tipo == TipoSaiu && s.supressor.Repetida(analise.Dono, s.agora()) {
+		return nil, ErrSaidaRepetida
 	}
 
 	jogador := analise.Jogador

@@ -116,7 +116,7 @@ func (ctrl *controllerImpl) Receber(c *gin.Context) {
 		return
 	}
 
-	resultados, err := ctrl.service.RegistrarLote(c.Request.Context(), linhas)
+	resultados, ignorados, err := ctrl.service.RegistrarLote(c.Request.Context(), linhas)
 	if err != nil {
 		ctrl.responderErro(c, err)
 		return
@@ -133,7 +133,11 @@ func (ctrl *controllerImpl) Receber(c *gin.Context) {
 		})
 	}
 
-	c.JSON(http.StatusAccepted, IngestaoResponseDto{Recebidos: len(eventos), Eventos: eventos})
+	c.JSON(http.StatusAccepted, IngestaoResponseDto{
+		Recebidos: len(eventos),
+		Ignorados: ignorados,
+		Eventos:   eventos,
+	})
 }
 
 // Stream é o fluxo SSE do painel.

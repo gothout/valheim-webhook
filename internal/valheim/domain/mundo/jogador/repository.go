@@ -51,9 +51,22 @@ func (r *repositoryImpl) FindByZDOID(ctx context.Context, servidor, zdoid string
 		return nil, ErrNotFound
 	}
 
+	// A busca é pelo DONO (a metade antes do `:`), e não pelo ZDOID inteiro.
+	//
+	// O motivo está no log do servidor: ao desconectar, o Valheim destrói TODOS
+	// os objetos da pessoa (`<dono>:2236`, `<dono>:2239`, `<dono>:1`…), e o que
+	// chega primeiro raramente é o objeto do personagem — que é o único ZDOID
+	// que este registro guarda. Comparar o inteiro erraria quase sempre;
+	// comparar o dono acerta em todos.
+	dono := limpo
+	if antes, _, achou := strings.Cut(limpo, ":"); achou && antes != "" {
+		dono = antes
+	}
+
 	var j Jogador
 	err := r.db.WithContext(ctx).
-		Where("servidor = ? AND zdoid = ? AND online = TRUE", servidor, limpo).
+		Where("servidor = ? AND online = TRUE", servidor).
+		Where("zdoid = ? OR zdoid LIKE ?", limpo, dono+":%").
 		Order("ultimo_em DESC").
 		First(&j).Error
 	switch {

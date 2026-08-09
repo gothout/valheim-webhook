@@ -146,6 +146,10 @@ func (e eventosParaIngestao) Registrar(ctx context.Context, servidor, linha stri
 		return ingestao.Registro{}, ingestao.ErrCorpoVazio
 	case errors.Is(err, evento.ErrLinhaLonga):
 		return ingestao.Registro{}, ingestao.ErrCorpoGrande
+	case errors.Is(err, evento.ErrSaidaRepetida):
+		// A mesma saída chegando pela quadragésima vez não é erro: é a
+		// enxurrada de objetos abandonados que o Valheim emite por desconexão.
+		return ingestao.Registro{}, ingestao.ErrEventoIgnorado
 	case err != nil:
 		return ingestao.Registro{}, fmt.Errorf("%w: %v", ingestao.ErrRegistro, err)
 	}

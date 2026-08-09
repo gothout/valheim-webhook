@@ -6,6 +6,7 @@
 configs.json
 docker-compose.yml
 iniciar.sh
+deploy
 README.md
 AGENTS.md
 arch-go.yml

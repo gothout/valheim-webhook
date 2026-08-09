@@ -17,7 +17,16 @@ type Analise struct {
 	Jogador string
 	SteamID string
 	ZDOID   string
-	Texto   string
+	// Dono é a primeira metade do ZDOID (`-53465420` em `-53465420:2236`) — o
+	// identificador do JOGADOR dono do objeto.
+	//
+	// Ele importa por causa de como o servidor anuncia uma saída: ele não
+	// escreve "fulano saiu", escreve uma linha `Destroying abandoned…` para
+	// CADA objeto que a pessoa deixou no mundo — foram 40+ numa saída real do
+	// log deste servidor. Todas com o mesmo dono e sufixos diferentes. É o dono
+	// que amarra a enxurrada a uma pessoa só.
+	Dono  string
+	Texto string
 	// OcorridoEm é a hora carimbada na linha, em UTC. Zero quando a linha não
 	// traz carimbo.
 	OcorridoEm time.Time
@@ -55,10 +64,19 @@ var (
 	padraoTextoDePre = regexp.MustCompile(`Got text\s+from\s+(.+?)\s*:\s*(.+?)\s*$`)
 	padraoTexto      = regexp.MustCompile(`Got text\s*:?\s*(.+?)\s*$`)
 
-	// Carimbo de hora no começo da linha: `03/24/2024 22:31:07: `.
-	padraoCarimbo = regexp.MustCompile(`^(\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2})\s*:\s*`)
+	// Carimbo de hora: `08/09/2026 05:20:27: `.
+	//
+	// NÃO é ancorado no começo da linha de propósito. Dependendo de como o
+	// container encaminha o log, a linha chega crua
+	// (`08/09/2026 05:20:27: Game server connected`) ou com um prefixo de
+	// supervisor pela frente
+	// (`Aug  9 05:20:27 supervisord: valheim-server 08/09/2026 ...`). Ancorar
+	// faria o segundo caso perder a hora do JOGO e usar a da chegada — que é
+	// parecida o bastante para ninguém notar, e errada quando o receptor fica
+	// um tempo fora do ar e recebe um lote atrasado.
+	padraoCarimbo = regexp.MustCompile(`(\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2})\s*:\s*`)
 	// Formato ISO, emitido por algumas configurações de locale do container.
-	padraoCarimboISO = regexp.MustCompile(`^(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2})\s*:?\s*`)
+	padraoCarimboISO = regexp.MustCompile(`(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2})\s*:?\s*`)
 )
 
 // ZDOIDMorte é o ZDOID que o servidor emite quando o personagem morre: o objeto
@@ -96,6 +114,7 @@ func Analisar(linha string) (Analise, error) {
 			a.ZDOID = ""
 		} else {
 			a.Tipo = TipoEntrou
+			a.Dono = partes[2]
 		}
 
 	case padraoConexao.MatchString(corpo):
@@ -106,6 +125,7 @@ func Analisar(linha string) (Analise, error) {
 		partes := padraoAbandono.FindStringSubmatch(corpo)
 		a.Tipo = TipoSaiu
 		a.ZDOID = partes[1] + ":" + partes[2]
+		a.Dono = partes[1]
 
 	case padraoServidor.MatchString(corpo):
 		a.Tipo = TipoServidorPronto
@@ -129,19 +149,23 @@ func Analisar(linha string) (Analise, error) {
 // interpretada no fuso local deste processo (que roda na mesma máquina, ou com
 // o mesmo TZ) e convertida para UTC.
 func extrairCarimbo(linha string) (time.Time, string, bool) {
-	if partes := padraoCarimbo.FindStringSubmatch(linha); partes != nil {
-		resto := strings.TrimSpace(linha[len(partes[0]):])
+	// `FindStringSubmatchIndex` em vez de `FindStringSubmatch`: com o padrão
+	// não ancorado, o resto da linha é o que vem DEPOIS do casamento — e para
+	// saber onde ele termina é preciso o índice, não o texto.
+	if pos := padraoCarimbo.FindStringSubmatchIndex(linha); pos != nil {
+		resto := strings.TrimSpace(linha[pos[1]:])
+		carimbo := linha[pos[2]:pos[3]]
 		for _, layout := range []string{"01/02/2006 15:04:05", "02/01/2006 15:04:05"} {
-			if quando, err := time.ParseInLocation(layout, partes[1], time.Local); err == nil {
+			if quando, err := time.ParseInLocation(layout, carimbo, time.Local); err == nil {
 				return quando.UTC(), resto, true
 			}
 		}
 		return time.Time{}, resto, false
 	}
 
-	if partes := padraoCarimboISO.FindStringSubmatch(linha); partes != nil {
-		resto := strings.TrimSpace(linha[len(partes[0]):])
-		normalizada := strings.Replace(partes[1], "T", " ", 1)
+	if pos := padraoCarimboISO.FindStringSubmatchIndex(linha); pos != nil {
+		resto := strings.TrimSpace(linha[pos[1]:])
+		normalizada := strings.Replace(linha[pos[2]:pos[3]], "T", " ", 1)
 		if quando, err := time.ParseInLocation("2006-01-02 15:04:05", normalizada, time.Local); err == nil {
 			return quando.UTC(), resto, true
 		}

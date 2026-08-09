@@ -48,8 +48,9 @@ type Resultado struct {
 type Service interface {
 	// Registrar processa UMA linha de log.
 	Registrar(ctx context.Context, linha string) (*Resultado, error)
-	// RegistrarLote processa várias linhas, na ordem em que chegaram.
-	RegistrarLote(ctx context.Context, linhas []string) ([]Resultado, error)
+	// RegistrarLote processa várias linhas, na ordem em que chegaram, e devolve
+	// também quantas foram IGNORADAS (repetições de um fato já registrado).
+	RegistrarLote(ctx context.Context, linhas []string) ([]Resultado, int, error)
 	// Servidor é o nome com que os eventos são carimbados.
 	Servidor() string
 	// Hub é o barramento do painel, entregue ao controller para ele registrar a
@@ -75,7 +76,13 @@ func (s *serviceImpl) Registrar(ctx context.Context, linha string) (*Resultado, 
 	}
 
 	registro, err := s.deps.Eventos.Registrar(ctx, s.deps.Servidor, linha)
-	if err != nil {
+	switch {
+	case errors.Is(err, ErrEventoIgnorado):
+		// Repetição de um fato já registrado: devolvida sem observar como
+		// erro. Observá-la encheria o mapa de erros com dezenas de linhas por
+		// desconexão — exatamente o ruído que a supressão existe para evitar.
+		return nil, ErrEventoIgnorado
+	case err != nil:
 		return nil, obs.Observe(ctx, err)
 	}
 
@@ -86,29 +93,38 @@ func (s *serviceImpl) Registrar(ctx context.Context, linha string) (*Resultado, 
 	return &Resultado{Registro: registro, Presenca: presenca, Notificado: notificado}, nil
 }
 
-func (s *serviceImpl) RegistrarLote(ctx context.Context, linhas []string) ([]Resultado, error) {
+func (s *serviceImpl) RegistrarLote(ctx context.Context, linhas []string) ([]Resultado, int, error) {
 	if len(linhas) == 0 {
-		return nil, obs.Observe(ctx, ErrCorpoVazio)
+		return nil, 0, obs.Observe(ctx, ErrCorpoVazio)
 	}
 	if len(linhas) > MaxLinhasPorLote {
-		return nil, obs.Observe(ctx, ErrLoteGrande)
+		return nil, 0, obs.Observe(ctx, ErrLoteGrande)
 	}
 
 	resultados := make([]Resultado, 0, len(linhas))
+	ignorados := 0
+
 	for _, linha := range linhas {
 		if strings.TrimSpace(linha) == "" {
 			continue // linha em branco no meio do lote não é erro do lote
 		}
 		resultado, err := s.Registrar(ctx, linha)
-		if err != nil {
-			return nil, err
+		switch {
+		case errors.Is(err, ErrEventoIgnorado):
+			ignorados++
+			continue
+		case err != nil:
+			return nil, 0, err
 		}
 		resultados = append(resultados, *resultado)
 	}
-	if len(resultados) == 0 {
-		return nil, obs.Observe(ctx, ErrCorpoVazio)
+
+	// Lote inteiro ignorado é SUCESSO, não erro: é o caso normal de uma
+	// desconexão, em que só a primeira das dezenas de linhas vira evento.
+	if len(resultados) == 0 && ignorados == 0 {
+		return nil, 0, obs.Observe(ctx, ErrCorpoVazio)
 	}
-	return resultados, nil
+	return resultados, ignorados, nil
 }
 
 // aplicarPresenca leva o evento ao estado do personagem.

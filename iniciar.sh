@@ -68,13 +68,22 @@ set -a; source "$ENV_FILE"; set +a
 
 # ---------- subir ----------
 
+# Com domínio configurado, o proxy reverso com HTTPS entra junto. Sem domínio,
+# o acesso é direto na porta e o Caddy nem sobe — ele não teria certificado
+# para emitir.
+PERFIL=()
+if [[ -n "${PAINEL_DOMINIO:-}" ]]; then
+  PERFIL=(--profile proxy)
+  azul "==> domínio ${PAINEL_DOMINIO}: o proxy com HTTPS entra junto"
+fi
+
 if [[ "${1:-}" == "--recriar" ]]; then
   azul "==> rebuild da imagem"
-  "${COMPOSE[@]}" build --no-cache
+  "${COMPOSE[@]}" "${PERFIL[@]}" build --no-cache
 fi
 
 azul "==> subindo os containers"
-"${COMPOSE[@]}" up -d --build
+"${COMPOSE[@]}" "${PERFIL[@]}" up -d --build
 
 # ---------- esperar ficar de pé ----------
 
@@ -101,7 +110,12 @@ verde "==> no ar"
 # ---------- o que a pessoa precisa saber agora ----------
 
 echo
-echo "  painel .......... http://localhost:${PORTA}/"
+if [[ -n "${PAINEL_DOMINIO:-}" ]]; then
+  echo "  painel .......... https://${PAINEL_DOMINIO}/"
+  echo "                    (o certificado pode levar ~30s na primeira subida)"
+else
+  echo "  painel .......... http://localhost:${PORTA}/"
+fi
 echo "  ingestão ........ POST http://localhost:${PORTA}/eventos"
 echo "  status .......... http://localhost:${PORTA}/api/status"
 echo

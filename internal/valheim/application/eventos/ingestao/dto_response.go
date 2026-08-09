@@ -21,7 +21,11 @@ type EventoAceitoDto struct {
 
 // IngestaoResponseDto é o corpo de `POST /eventos`.
 type IngestaoResponseDto struct {
-	Recebidos int               `json:"recebidos"`
+	Recebidos int `json:"recebidos"`
+	// Ignorados são as linhas entendidas que NÃO viraram evento novo — as
+	// repetições da mesma saída. Não são erro, e aparecem separadas para quem
+	// depura o hook enxergar a diferença entre "não chegou" e "chegou de novo".
+	Ignorados int               `json:"ignorados"`
 	Eventos   []EventoAceitoDto `json:"eventos"`
 }
 

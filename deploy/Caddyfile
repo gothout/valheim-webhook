@@ -1,0 +1,32 @@
+# Proxy reverso do painel, com HTTPS automático (Let's Encrypt).
+#
+# Sobe só com o perfil `proxy`:
+#
+#     docker compose --profile proxy up -d
+#
+# Requisitos para o certificado sair: o domínio de PAINEL_DOMINIO tem de
+# resolver para o IP desta máquina e as portas 80 e 443 têm de estar livres e
+# alcançáveis da internet. O Caddy cuida do resto (emissão e renovação) sem
+# nenhum comando extra.
+
+{
+	# E-mail do Let's Encrypt (avisos de expiração). Vazio usa conta anônima.
+	email {$ACME_EMAIL}
+}
+
+{$PAINEL_DOMINIO} {
+	encode gzip
+
+	reverse_proxy app:6060 {
+		# `flush_interval -1` DESLIGA o buffer da resposta.
+		#
+		# Não é ajuste fino: o feed do painel é SSE, uma resposta que fica
+		# aberta por horas mandando poucos bytes. Com buffer, o Caddy segura os
+		# eventos esperando encher, e a tela só atualiza em blocos — ou nunca.
+		flush_interval -1
+
+		# O IP real do visitante, para o log de acesso do serviço. Ele só é
+		# aceito do outro lado se a faixa do proxy estiver em TRUSTED_PROXY.
+		header_up X-Real-IP {remote_host}
+	}
+}

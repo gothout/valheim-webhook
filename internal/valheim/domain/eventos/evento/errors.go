@@ -10,6 +10,10 @@ var (
 	ErrLinhaLonga = errors.New("linha de log acima do tamanho máximo")
 	// ErrNotFound é o evento inexistente.
 	ErrNotFound = errors.New("evento não encontrado")
+	// ErrSaidaRepetida é uma das dezenas de linhas `Destroying abandoned…` que
+	// o servidor emite na MESMA saída. Não é falha: é a segunda em diante do
+	// mesmo fato, e registrá-la de novo encheria o feed com a mesma notícia.
+	ErrSaidaRepetida = errors.New("saída já registrada nesta janela")
 	// ErrTipoInvalido é o filtro pedindo um tipo fora do vocabulário.
 	ErrTipoInvalido = errors.New("tipo de evento inválido")
 	// ErrDataInvalida é o filtro com data fora do formato RFC3339.
@@ -22,10 +26,11 @@ var (
 // errCodes registra sentinela → código estável para o observador de erros.
 // Obrigatório: todo sentinela novo entra neste mapa.
 var errCodes = map[error]string{
-	ErrLinhaVazia:   "ErrLinhaVazia",
-	ErrLinhaLonga:   "ErrLinhaLonga",
-	ErrNotFound:     "ErrNotFound",
-	ErrTipoInvalido: "ErrTipoInvalido",
-	ErrDataInvalida: "ErrDataInvalida",
-	ErrPersistencia: "ErrPersistencia",
+	ErrLinhaVazia:    "ErrLinhaVazia",
+	ErrLinhaLonga:    "ErrLinhaLonga",
+	ErrNotFound:      "ErrNotFound",
+	ErrSaidaRepetida: "ErrSaidaRepetida",
+	ErrTipoInvalido:  "ErrTipoInvalido",
+	ErrDataInvalida:  "ErrDataInvalida",
+	ErrPersistencia:  "ErrPersistencia",
 }

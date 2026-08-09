@@ -20,6 +20,11 @@ var (
 	// personagem online. Não é falha: acontece toda vez que o mundo reinicia e
 	// o servidor limpa o que ficou da sessão anterior.
 	ErrPresencaDesconhecida = errors.New("presença desconhecida")
+	// ErrEventoIgnorado é a linha que chegou, foi entendida e NÃO virou evento
+	// novo — hoje, as repetições da mesma saída (o Valheim emite uma linha por
+	// objeto abandonado). Vira contador na resposta, nunca erro para quem
+	// chamou: a linha não se perdeu, ela é a mesma notícia de novo.
+	ErrEventoIgnorado = errors.New("linha ignorada: repetição de um fato já registrado")
 )
 
 // errCodes registra sentinela → código estável para o observador de erros.
@@ -31,4 +36,5 @@ var errCodes = map[error]string{
 	ErrLoteGrande:           "ErrLoteGrande",
 	ErrRegistro:             "ErrRegistro",
 	ErrPresencaDesconhecida: "ErrPresencaDesconhecida",
+	ErrEventoIgnorado:       "ErrEventoIgnorado",
 }
