@@ -63,8 +63,20 @@ if [[ ! -f "$ENV_FILE" ]]; then
   verde "    $ENV_FILE criado. Ele guarda os segredos: não versione."
 fi
 
-# shellcheck disable=SC1090
-set -a; source "$ENV_FILE"; set +a
+# Leitura do .env SEM `source`.
+#
+# `source` manda o shell interpretar o arquivo, e aí um valor perfeitamente
+# válido para o Docker Compose — `PAINEL_TITULO=Valheim - playground` — vira
+# "comando `-` não encontrado". O compose lê `CHAVE=valor` literalmente; este
+# script passa a ler do mesmo jeito.
+valor_do_env() {
+  sed -n "s/^$1=//p" "$ENV_FILE" | tail -1 | sed -e 's/^"\(.*\)"$/\1/' -e "s/^'\(.*\)'$/\1/"
+}
+
+HTTP_PORT="$(valor_do_env HTTP_PORT)"
+PAINEL_DOMINIO="$(valor_do_env PAINEL_DOMINIO)"
+SERVIDOR="$(valor_do_env SERVIDOR)"
+INGEST_TOKEN="$(valor_do_env INGEST_TOKEN)"
 
 # ---------- subir ----------
 
