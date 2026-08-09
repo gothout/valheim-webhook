@@ -10,14 +10,20 @@ diferença, ela está marcada como **[difere do atila]** com o motivo.
 ## Checks obrigatórios antes de fechar uma alteração
 
 ```bash
-go mod tidy                                       # na primeira vez: gera o go.sum
 go build ./... && go vet ./... && go test ./...
 ```
 
-**O `go.sum` ainda não está versionado** e o `go.mod` lista só as dependências
-diretas — o primeiro `go mod tidy` resolve as indiretas e grava as somas.
-Comite os dois no mesmo commit e apague esta nota (e ajuste o `Dockerfile`, que
-hoje roda `tidy` no build por causa disso).
+**O toolchain é o Go 1.25**, mesmo com `go 1.24.5` no `go.mod`. Não é
+preciosismo: uma dependência de TESTE transitiva (`rogpeppe/go-internal`, pela
+cadeia do testify) exige `go >= 1.25`, e com 1.24 a resolução de módulos falha
+antes de compilar. O `Dockerfile` usa `golang:1.25-alpine` pelo mesmo motivo.
+
+Sem Go na máquina? O build acontece no container:
+
+```bash
+docker run --rm -v "$PWD":/src -w /src golang:1.25-alpine \
+  sh -c 'go build ./... && go vet ./... && go test ./...'
+```
 
 `arch-go` (`go install github.com/arch-go/arch-go@latest`) valida as regras de
 camada do `arch-go.yml`. Ele exige **100% de cobertura**: pacote novo que
@@ -108,6 +114,24 @@ tem um `curl` com prazo e o servidor de jogo não espera.
 **Notificação só na TRANSIÇÃO de presença.** O servidor emite
 `Got character ZDOID` também no renascimento; sem a trava, o canal receberia
 "Fulano entrou" a cada morte.
+
+**Uma saída é dezenas de linhas.** Quando alguém desconecta, o Valheim escreve
+`Destroying abandoned non persistent zdo <dono>:<n>` para CADA objeto que a
+pessoa deixou no mundo — 40+ no mesmo segundo, no log real deste projeto. O que
+amarra a enxurrada a uma pessoa é o DONO (a metade antes do `:`), e o
+`supressorDeSaidas` (memória, janela de 30s) deixa passar só a primeira. As
+demais voltam como `ignorados` na resposta do `POST /eventos`, nunca como erro:
+a linha não se perdeu, ela é a mesma notícia de novo.
+
+Corolário que já mordeu: a busca do personagem por ZDOID casa pelo DONO, não
+pelo ZDOID inteiro. O primeiro objeto destruído quase nunca é o do personagem —
+que é justamente o único ZDOID que o registro guarda.
+
+**O carimbo de hora não é ancorado no começo da linha.** Dependendo de como o
+container encaminha o log, a linha chega crua ou com um prefixo de supervisor
+pela frente. Ancorar fazia o evento usar a hora da CHEGADA em vez da hora do
+JOGO — diferença invisível no dia a dia e errada exatamente quando importa
+(receptor que ficou fora do ar e recebeu um lote atrasado).
 
 **Segredo nunca sai do subdomínio que o guarda.** O hash de senha tem
 `json:"-"` e a comparação é um método do service; os segredos do Discord só

@@ -103,6 +103,16 @@ curl -i -X POST http://localhost:6060/eventos \
 
 Responde `202` com o que foi entendido. O evento aparece no painel na hora.
 
+```json
+{"recebidos": 1, "ignorados": 0, "eventos": [{"tipo": "entrou", "jogador": "Odin", ...}]}
+```
+
+`ignorados` são linhas entendidas que **não** viraram evento novo. Elas
+existem por causa de como o Valheim anuncia uma desconexão: ele escreve uma
+linha `Destroying abandoned…` para cada objeto que a pessoa deixou no mundo —
+dezenas, no mesmo segundo. O receptor transforma a primeira em "saiu" e conta
+as outras aqui, em vez de encher o feed com a mesma notícia quarenta vezes.
+
 ---
 
 ## O painel

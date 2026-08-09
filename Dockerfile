@@ -5,18 +5,22 @@
 # falar HTTPS com o Discord), do fuso horário e das migrations.
 
 # ---------- etapa 1: build ----------
-FROM golang:1.24-alpine AS build
+#
+# O toolchain é 1.25 mesmo com `go 1.24.5` no go.mod (compilador novo constrói
+# linguagem antiga sem problema). O motivo é concreto: uma dependência de TESTE
+# transitiva (`rogpeppe/go-internal`, puxada pela cadeia do testify) exige
+# `go >= 1.25`, e a imagem alpine fixa `GOTOOLCHAIN=local` — com 1.24 a
+# resolução de módulos falha antes de compilar uma linha.
+FROM golang:1.25-alpine AS build
 
 WORKDIR /src
 
-COPY . .
+# As dependências vêm ANTES do código: enquanto go.mod/go.sum não mudarem, esta
+# camada é reaproveitada e um rebuild não volta à rede.
+COPY go.mod go.sum ./
+RUN go mod download
 
-# `go mod tidy`, e não `go mod download`, porque o go.sum ainda não está
-# versionado: o tidy é quem resolve as dependências INDIRETAS e grava as somas.
-# Assim que o go.sum entrar no repositório, troque por
-# `COPY go.mod go.sum ./ && RUN go mod download` antes do `COPY . .` — aí a
-# camada de dependências passa a ser reaproveitada entre builds.
-RUN go mod tidy
+COPY . .
 
 # CGO desligado: o binário fica estático e roda em qualquer imagem base.
 # -trimpath tira o caminho da máquina de build; -ldflags="-s -w" tira a tabela
