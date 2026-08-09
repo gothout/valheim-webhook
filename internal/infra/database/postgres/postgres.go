@@ -16,7 +16,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"log/slog"
+	"os"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -87,6 +89,13 @@ func (c *Conn) Close() error {
 // pergunta é "o pool responde agora?", não "o banco consegue responder um dia".
 const TempoDoPing = 3 * time.Second
 
+// TempoDeQueryLenta é a partir de quando uma consulta vira linha de log.
+//
+// 200ms é generoso para o que este produto faz (inserir um evento, listar cem)
+// e apertado o bastante para uma consulta que degradou aparecer antes de o
+// painel ficar visivelmente lento.
+const TempoDeQueryLenta = 200 * time.Millisecond
+
 // Connect abre o pool e sobe o health check.
 //
 // Função pura: não guarda nada em variável global e pode ser chamada por um
@@ -95,9 +104,19 @@ func Connect(cfg config.Postgres) (*Conn, error) {
 	dsn := DSN(cfg)
 
 	gormDB, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		// O log do GORM em nível `Warn` mostra query lenta e erro, sem despejar
-		// todo SELECT do painel no stdout.
-		Logger: logger.Default.LogMode(logger.Warn),
+		Logger: logger.New(log.New(os.Stdout, "", 0), logger.Config{
+			// Nível `Warn`: query lenta e erro aparecem, o SELECT de cada
+			// requisição do painel não.
+			LogLevel:      logger.Warn,
+			SlowThreshold: TempoDeQueryLenta,
+			// "Registro não encontrado" NÃO é erro, e imprimi-lo como se fosse
+			// é pior do que ruído: no primeiro boot, as duas consultas que
+			// legitimamente não acham nada (a integração ainda não salva, a
+			// conta administrativa ainda não criada) saíam em vermelho, com
+			// SQL e tudo, no meio das linhas que dizem que deu tudo certo.
+			IgnoreRecordNotFoundError: true,
+			Colorful:                  false,
+		}),
 		// Tudo em UTC dentro do processo. A hora local da máquina do servidor
 		// de Valheim só aparece na linha de log que chega — e é convertida na
 		// ingestão, uma vez.
