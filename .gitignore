@@ -1,0 +1,18 @@
+# Configuração local (o modelo versionado é o configs_example.json).
+configs.json
+
+# Segredos do docker-compose (o modelo versionado é o .env.example).
+.env
+
+# Binários do build.
+/valheim-webhook
+/valheim-webhook.exe
+/bin/
+
+# Saída de teste e cobertura.
+*.test
+coverage.out
+
+# Editor.
+.idea/
+.vscode/

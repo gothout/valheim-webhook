@@ -1,0 +1,103 @@
+# arch-go.yml — regras de camada, verificadas por
+# `github.com/arch-go/arch-go`. Rodar `arch-go` antes de fechar uma alteração.
+#
+# Como ler os padrões: o separador é `.` e o alvo é o **import path** completo
+# (`valheim-webhook/internal/pkg/config`). `x.**` = `x` e qualquer nível abaixo;
+# `a.*.b` = exatamente um nível entre `a` e `b`.
+#
+# `shouldOnlyDependsOn.internal` é a forma preferida: ela lista o que a camada
+# **pode** importar, então camada nova criada depois nasce proibida em vez de
+# nascer permitida (o oposto de enumerar proibições).
+version: 1
+
+threshold:
+  # 100% das regras cumpridas e 100% dos pacotes cobertos por ao menos uma
+  # regra: pacote novo fora do mapa de camadas quebra o `arch-go`, em vez de
+  # passar despercebido.
+  compliance: 100
+  coverage: 100
+
+dependenciesRules:
+  # Regra 1 — `pkg` é folha: não importa nada de `internal/` fora de `pkg`.
+  # É o que permite `rest_err` declarar a interface `Observador` de que precisa
+  # em vez de importar `errobserve`, e `errobserve` declarar `Sink` em vez de
+  # importar um banco.
+  - package: "valheim-webhook/internal/pkg.**"
+    shouldOnlyDependsOn:
+      internal:
+        - "valheim-webhook/internal/pkg.**"
+
+  # Regra 2 — `infra` importa apenas `pkg` + libs externas. Vale também para
+  # `infra` → `infra` (o runner de migrations não abre Postgres; ele recebe a
+  # conexão pronta do `cmd/bootstrap`).
+  - package: "valheim-webhook/internal/infra.**"
+    shouldOnlyDependsOn:
+      internal:
+        - "valheim-webhook/internal/pkg.**"
+
+  # Regras 3 e 4 — `domain` importa `pkg` + `infra` e mais nada interno: nunca
+  # `application`, nunca outro `{dominio}`, nunca um `{subdominio}` irmão (um
+  # pacote não importa a si mesmo, então proibir todo `domain` proíbe
+  # exatamente os irmãos). Exceção única e documentada: o middleware do `iam`,
+  # consumido pelos controllers.
+  - package: "valheim-webhook/internal.*.domain.**"
+    shouldOnlyDependsOn:
+      internal:
+        - "valheim-webhook/internal/pkg.**"
+        - "valheim-webhook/internal/infra.**"
+        - "valheim-webhook/internal/iam/middleware"
+
+  # Regra 5 — `application` orquestra `domain` e usa `pkg` + `infra`. Não
+  # aparece `application` na lista: subdomínio de aplicação também não importa
+  # irmão.
+  #
+  # Na prática, nem `domain` aparece nos imports de `application` aqui: cada
+  # vizinho entra por interface estreita declarada no `contratos.go` e ligada
+  # em `cmd/bootstrap/adaptadores.go`. A regra permite o atalho; o projeto não
+  # o usa, e o motivo é testabilidade — `ingestao` roda sem banco.
+  - package: "valheim-webhook/internal.*.application.**"
+    shouldOnlyDependsOn:
+      internal:
+        - "valheim-webhook/internal/pkg.**"
+        - "valheim-webhook/internal/infra.**"
+        - "valheim-webhook/internal.*.domain.**"
+        - "valheim-webhook/internal/iam/middleware"
+
+  # O middleware do `iam` é a ponte autorizada: ele NÃO importa `iam/domain`
+  # (os controllers de lá importam ELE, e o caminho contrário fecharia um
+  # ciclo). Tudo o que precisa do domínio entra por interface.
+  - package: "valheim-webhook/internal/iam/middleware"
+    shouldOnlyDependsOn:
+      internal:
+        - "valheim-webhook/internal/pkg.**"
+
+  # Camada HTTP: monta o engine e as rotas a partir de `pkg`, dos controllers e
+  # do painel embutido. Não fala com `infra` — o estado das dependências chega
+  # como `Sonda` injetada pelo `cmd/bootstrap`.
+  - package: "valheim-webhook/cmd/server.**"
+    shouldNotDependsOn:
+      internal:
+        - "valheim-webhook/internal/infra.**"
+
+  # `cmd` é a composição do processo: pode enxergar tudo (é onde dois pacotes de
+  # `infra` se encontram e onde um subdomínio conhece outro), mas nada de
+  # `internal/` pode enxergar `cmd`.
+  - package: "valheim-webhook/cmd.**"
+    shouldOnlyDependsOn:
+      internal:
+        - "valheim-webhook/cmd.**"
+        - "valheim-webhook/internal.**"
+        - "valheim-webhook/web"
+
+  # O painel embutido é uma folha: HTML, CSS, JS e o `go:embed` que os carrega.
+  - package: "valheim-webhook/web"
+    shouldNotDependsOn:
+      internal:
+        - "valheim-webhook/internal.**"
+        - "valheim-webhook/cmd.**"
+
+  # Raiz do módulo: `main.go` só delega para a CLI.
+  - package: "valheim-webhook.*"
+    shouldOnlyDependsOn:
+      internal:
+        - "valheim-webhook/cmd.**"

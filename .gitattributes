@@ -1,0 +1,14 @@
+# Fim de linha.
+#
+# O padrão do repositório é LF. A regra que NÃO pode faltar é a dos scripts de
+# shell e dos arquivos que entram na imagem Docker: um `iniciar.sh` com CRLF
+# falha no Linux com `bad interpreter: /usr/bin/env bash^M` — erro que não diz o
+# que aconteceu de verdade.
+* text=auto eol=lf
+
+*.sh        text eol=lf
+Dockerfile  text eol=lf
+*.yml       text eol=lf
+*.sql       text eol=lf
+*.go        text eol=lf
+*.json      text eol=lf

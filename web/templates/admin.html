@@ -1,0 +1,175 @@
+{{define "admin.html"}}<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Administração · {{.Titulo}}</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>🛡️</text></svg>">
+</head>
+<body>
+  <header class="topo">
+    <h1><span class="marca">⚔</span> {{.Titulo}}</h1>
+    <nav class="abas">
+      <a href="/">Painel</a>
+      <a href="/admin" data-so-admin hidden>Administração</a>
+    </nav>
+    <span class="espaco"></span>
+    <span class="selo" data-usuario>…</span>
+    <button data-sair>Sair</button>
+  </header>
+
+  <main>
+    <section class="cartao">
+      <h2>Integração com o Discord <span id="selo-discord" class="selo desligado">…</span></h2>
+      <div class="corpo">
+        <div class="aviso" id="aviso-discord" hidden></div>
+
+        <form id="form-discord">
+          <div class="linha">
+            <div class="campo">
+              <label for="modo">Modo</label>
+              <select id="modo" name="modo">
+                <option value="webhook">Webhook de canal</option>
+                <option value="bot">App / bot do Discord</option>
+              </select>
+            </div>
+            <div class="campo">
+              <label for="username">Nome exibido (só no modo webhook)</label>
+              <input type="text" id="username" name="username" placeholder="Huginn">
+            </div>
+          </div>
+
+          <div id="campos-webhook">
+            <div class="campo">
+              <label for="webhook_url">URL do webhook</label>
+              <input type="text" id="webhook_url" name="webhook_url" autocomplete="off">
+            </div>
+          </div>
+
+          <div id="campos-bot" hidden>
+            <div class="linha">
+              <div class="campo">
+                <label for="bot_token">Token do bot</label>
+                <input type="password" id="bot_token" name="bot_token" autocomplete="off">
+              </div>
+              <div class="campo">
+                <label for="canal_id">ID do canal</label>
+                <input type="text" id="canal_id" name="canal_id" autocomplete="off">
+              </div>
+            </div>
+          </div>
+
+          <div class="campo">
+            <label>Eventos que viram mensagem</label>
+            <label><input type="checkbox" name="eventos" value="entrou"> entrou</label>
+            <label><input type="checkbox" name="eventos" value="saiu"> saiu</label>
+            <label><input type="checkbox" name="eventos" value="morreu"> morreu</label>
+            <label><input type="checkbox" name="eventos" value="mensagem"> mensagem no chat</label>
+            <label><input type="checkbox" name="eventos" value="servidor_pronto"> servidor no ar</label>
+            <label><input type="checkbox" name="eventos" value="conexao"> conexão</label>
+            <label><input type="checkbox" name="eventos" value="desconhecido"> linha desconhecida</label>
+          </div>
+
+          <div class="campo">
+            <label><input type="checkbox" id="habilitado" name="habilitado"> Integração habilitada</label>
+          </div>
+
+          <div class="acoes">
+            <button type="submit" class="primario">Salvar</button>
+            <button type="button" id="botao-testar">Enviar mensagem de teste</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section class="cartao">
+      <h2>Usuários</h2>
+      <div class="corpo">
+        <div class="aviso" id="aviso-usuarios" hidden></div>
+
+        <table id="tabela-usuarios">
+          <thead>
+            <tr>
+              <th>Nome</th><th>E-mail</th><th>Papel</th><th>Situação</th><th>Último acesso</th><th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+
+        <h3 style="margin:22px 0 10px;font-size:14px;">Novo usuário</h3>
+        <form id="form-usuario">
+          <div class="linha">
+            <div class="campo">
+              <label for="novo-nome">Nome</label>
+              <input type="text" id="novo-nome" name="nome" required>
+            </div>
+            <div class="campo">
+              <label for="novo-email">E-mail</label>
+              <input type="email" id="novo-email" name="email" required>
+            </div>
+            <div class="campo">
+              <label for="nova-senha">Senha (mínimo 8)</label>
+              <input type="password" id="nova-senha" name="senha" autocomplete="new-password" required>
+            </div>
+            <div class="campo">
+              <label for="novo-papel">Papel</label>
+              <select id="novo-papel" name="papel">
+                <option value="visualizador">Visualizador</option>
+                <option value="admin">Administrador</option>
+              </select>
+            </div>
+          </div>
+          <div class="acoes"><button type="submit" class="primario">Criar</button></div>
+        </form>
+      </div>
+    </section>
+
+    <section class="cartao">
+      <h2>Minha senha</h2>
+      <div class="corpo">
+        <div class="aviso" id="aviso-minha-senha" hidden></div>
+        <form id="form-minha-senha">
+          <div class="linha">
+            <div class="campo">
+              <label for="senha_atual">Senha atual</label>
+              <input type="password" id="senha_atual" name="senha_atual" autocomplete="current-password" required>
+            </div>
+            <div class="campo">
+              <label for="senha_nova">Senha nova</label>
+              <input type="password" id="senha_nova" name="senha_nova" autocomplete="new-password" required>
+            </div>
+          </div>
+          <div class="acoes"><button type="submit">Trocar</button></div>
+        </form>
+      </div>
+    </section>
+
+    <section class="cartao">
+      <h2>Log do processo</h2>
+      <div class="corpo">
+        <div class="aviso erro" id="aviso-logs" hidden></div>
+        <div class="linha" style="margin-bottom:12px;">
+          <div class="campo" style="margin:0;">
+            <label for="log-nivel">Nível mínimo</label>
+            <select id="log-nivel">
+              <option value="">todos</option>
+              <option value="INFO">INFO</option>
+              <option value="WARN">WARN</option>
+              <option value="ERROR">ERROR</option>
+            </select>
+          </div>
+          <div class="campo" style="margin:0;">
+            <label for="log-busca">Buscar</label>
+            <input type="text" id="log-busca" placeholder="discord, postgres, ray_trace…">
+          </div>
+        </div>
+      </div>
+      <div class="logs" id="logs"></div>
+    </section>
+  </main>
+
+  <script src="/static/comum.js"></script>
+  <script src="/static/admin.js"></script>
+</body>
+</html>{{end}}

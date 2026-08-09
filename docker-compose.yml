@@ -1,0 +1,84 @@
+# valheim-webhook — o serviço e o banco, os dois em container.
+#
+#   ./iniciar.sh              # sobe tudo (gera os segredos na primeira vez)
+#   docker compose logs -f    # acompanha
+#   docker compose down       # para (mantém os dados)
+#   docker compose down -v    # para e APAGA os dados
+#
+# O que muda por instalação (segredos, destino do Discord) vem do arquivo .env,
+# que o `iniciar.sh` cria e que NÃO é versionado. O modelo está em .env.example.
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: valheim-webhook-postgres
+    environment:
+      POSTGRES_USER: ${PG_USER:-valheim}
+      POSTGRES_PASSWORD: ${PG_PWD:-valheim}
+      POSTGRES_DB: ${PG_DB:-valheim}
+      # Sessões em UTC: a aplicação também fixa TimeZone=UTC. A hora LOCAL só
+      # aparece na linha de log que chega do Valheim, e é convertida na
+      # ingestão — uma vez.
+      TZ: UTC
+      PGTZ: UTC
+    volumes:
+      - valheim_webhook_postgres:/var/lib/postgresql/data
+    # A porta NÃO é publicada de propósito: só o serviço fala com o banco, e
+    # abrir a 5432 na máquina é oferecer uma superfície que ninguém precisa.
+    # Para inspecionar à mão: `docker compose exec postgres psql -U valheim`.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER:-valheim} -d ${PG_DB:-valheim}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  app:
+    build: .
+    container_name: valheim-webhook
+    ports:
+      # 6060 é o endereço que o hook do container de Valheim chama.
+      - "${HTTP_PORT:-6060}:6060"
+    environment:
+      # --- banco (o host é o NOME DO SERVIÇO na rede do compose) ---
+      VALHEIM_WEBHOOK_PG_HOST: postgres
+      VALHEIM_WEBHOOK_PG_PORT: "5432"
+      VALHEIM_WEBHOOK_PG_USER: ${PG_USER:-valheim}
+      VALHEIM_WEBHOOK_PG_PWD: ${PG_PWD:-valheim}
+      VALHEIM_WEBHOOK_PG_DB: ${PG_DB:-valheim}
+
+      # --- segredos (gerados pelo iniciar.sh na primeira execução) ---
+      VALHEIM_WEBHOOK_JWT_SECRET: ${JWT_SECRET}
+      VALHEIM_WEBHOOK_INGEST_TOKEN: ${INGEST_TOKEN}
+      VALHEIM_WEBHOOK_ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@valheim.local}
+      # Vazia = o boot sorteia uma e a imprime UMA VEZ no log.
+      VALHEIM_WEBHOOK_ADMIN_SENHA: ${ADMIN_SENHA:-}
+
+      # --- Discord (opcional: dá para configurar tudo pelo painel depois) ---
+      VALHEIM_WEBHOOK_DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL:-}
+      VALHEIM_WEBHOOK_DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
+      VALHEIM_WEBHOOK_DISCORD_CHANNEL_ID: ${DISCORD_CHANNEL_ID:-}
+
+      # --- identificação ---
+      VALHEIM_WEBHOOK_SERVIDOR: ${SERVIDOR:-valheim}
+      VALHEIM_WEBHOOK_PAINEL_TITULO: ${PAINEL_TITULO:-Valheim}
+
+      # --- domínio público (tudo opcional: em branco = uso local/LAN) ---
+      VALHEIM_WEBHOOK_BASE_DOMAIN: ${BASE_DOMAIN:-}
+      VALHEIM_WEBHOOK_PAINEL_DOMINIO: ${PAINEL_DOMINIO:-}
+      VALHEIM_WEBHOOK_COOKIE_SEGURO: ${COOKIE_SEGURO:-false}
+      VALHEIM_WEBHOOK_COOKIE_DOMINIO: ${COOKIE_DOMINIO:-}
+      VALHEIM_WEBHOOK_TRUSTED_PROXY: ${TRUSTED_PROXY:-}
+      VALHEIM_WEBHOOK_CORS_ORIGENS: ${CORS_ORIGENS:-}
+
+      # O carimbo das linhas de log do Valheim vem sem fuso: é a hora local da
+      # máquina do servidor de jogo. Deixe este TZ igual ao dela.
+      TZ: ${TZ:-America/Sao_Paulo}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  valheim_webhook_postgres:

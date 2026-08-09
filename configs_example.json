@@ -1,0 +1,70 @@
+{
+  "app": {
+    "name": "valheim-webhook",
+    "env": "dev",
+    "version": "0.1.0",
+    "base_domain": ""
+  },
+  "server": {
+    "http": {
+      "port": 6060,
+      "trusted_proxy": [],
+      "cors": { "allowed_origins": [] }
+    }
+  },
+  "security": {
+    "jwt_secret": "",
+    "sessao_horas": 168,
+    "cookie_seguro": false,
+    "cookie_dominio": ""
+  },
+  "admin": {
+    "email": "admin@valheim.local",
+    "senha": "",
+    "nome": "Administrador"
+  },
+  "ingestao": {
+    "token": "",
+    "max_body_bytes": 65536,
+    "servidor": "playground"
+  },
+  "databases": {
+    "postgres": {
+      "host": "localhost",
+      "port": "5433",
+      "user": "valheim",
+      "pwd": "valheim",
+      "db_name": "valheim",
+      "ssl_mode": "disable",
+      "pool": {
+        "max_open_conns": 10,
+        "max_idle_conns": 5,
+        "conn_max_lifetime_min": 5,
+        "conn_max_idle_time_min": 2,
+        "health_interval_sec": 30
+      }
+    }
+  },
+  "discord": {
+    "enabled": true,
+    "webhook_url": "",
+    "bot_token": "",
+    "channel_id": "",
+    "username": "Huginn",
+    "timeout_sec": 10,
+    "fila": 256,
+    "eventos": ["entrou", "saiu", "morreu", "mensagem", "servidor_pronto"]
+  },
+  "migrations": {
+    "auto_run": true,
+    "path": "db/migrations",
+    "lock_timeout_sec": 5,
+    "statement_timeout_min": 10
+  },
+  "painel": {
+    "enabled": true,
+    "titulo": "Valheim — playground",
+    "dominio": "",
+    "eventos_no_feed": 100
+  }
+}

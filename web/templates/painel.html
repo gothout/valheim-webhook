@@ -1,0 +1,65 @@
+{{define "painel.html"}}<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Titulo}}</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>🛡️</text></svg>">
+</head>
+<body>
+  <header class="topo">
+    <h1><span class="marca">⚔</span> {{.Titulo}}</h1>
+    <nav class="abas">
+      <a href="/">Painel</a>
+      <a href="/admin" data-so-admin hidden>Administração</a>
+    </nav>
+    <span class="espaco"></span>
+    <span id="sinal-fluxo" class="selo desligado">conectando…</span>
+    <span class="selo" data-usuario>…</span>
+    <button data-sair>Sair</button>
+  </header>
+
+  <main>
+    <div class="aviso erro" id="aviso-painel" hidden></div>
+
+    <div class="indicadores">
+      <div class="indicador">
+        <div class="rotulo">Online agora</div>
+        <div class="valor" data-indicador="online">0</div>
+      </div>
+      <div class="indicador">
+        <div class="rotulo">Eventos (24h)</div>
+        <div class="valor" data-indicador="total">0</div>
+      </div>
+      <div class="indicador">
+        <div class="rotulo">Entradas (24h)</div>
+        <div class="valor" data-indicador="entradas">0</div>
+      </div>
+      <div class="indicador">
+        <div class="rotulo">Mortes (24h)</div>
+        <div class="valor" data-indicador="mortes">0</div>
+      </div>
+      <div class="indicador">
+        <div class="rotulo">Mensagens (24h)</div>
+        <div class="valor" data-indicador="falas">0</div>
+      </div>
+    </div>
+
+    <section class="cartao">
+      <h2>Personagens</h2>
+      <div class="corpo">
+        <div class="jogadores" id="jogadores"></div>
+      </div>
+    </section>
+
+    <section class="cartao">
+      <h2>Acontecimentos</h2>
+      <ul class="feed" id="feed"></ul>
+    </section>
+  </main>
+
+  <script src="/static/comum.js"></script>
+  <script src="/static/painel.js"></script>
+</body>
+</html>{{end}}

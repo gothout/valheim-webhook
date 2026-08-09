@@ -1,0 +1,313 @@
+/* Tema do painel: escuro, com o vocabulário visual do jogo (pedra, madeira,
+   bronze). Uma folha só, sem framework — o painel tem três telas. */
+
+:root {
+  --fundo: #14171c;
+  --fundo-alto: #1b1f27;
+  --fundo-topo: #10131a;
+  --borda: #2a3040;
+  --texto: #e6e8ee;
+  --texto-fraco: #9aa3b5;
+  --bronze: #c8973f;
+  --verde: #43b581;
+  --cinza: #99aab5;
+  --vermelho: #e74c3c;
+  --azul: #5865f2;
+  --amarelo: #f1c40f;
+  --raio: 10px;
+  --sombra: 0 1px 0 rgba(255, 255, 255, 0.03), 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--fundo);
+  color: var(--texto);
+  font: 15px/1.5 "Segoe UI", Roboto, system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--bronze); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ---------- estrutura ---------- */
+
+header.topo {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 24px;
+  background: var(--fundo-topo);
+  border-bottom: 1px solid var(--borda);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.topo h1 {
+  font-size: 17px;
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.topo .marca { color: var(--bronze); }
+
+nav.abas { display: flex; gap: 4px; margin-left: 12px; }
+
+nav.abas a {
+  padding: 6px 12px;
+  border-radius: var(--raio);
+  color: var(--texto-fraco);
+  font-size: 14px;
+}
+
+nav.abas a.ativa, nav.abas a:hover {
+  background: var(--fundo-alto);
+  color: var(--texto);
+  text-decoration: none;
+}
+
+.espaco { flex: 1; }
+
+main { padding: 24px; max-width: 1200px; margin: 0 auto; }
+
+section.cartao {
+  background: var(--fundo-alto);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra);
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+section.cartao > h2 {
+  margin: 0;
+  padding: 14px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--texto-fraco);
+  border-bottom: 1px solid var(--borda);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+section.cartao > .corpo { padding: 18px; }
+
+/* ---------- indicadores ---------- */
+
+.indicadores {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.indicador {
+  background: var(--fundo-alto);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  padding: 14px 16px;
+}
+
+.indicador .rotulo {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--texto-fraco);
+}
+
+.indicador .valor {
+  font-size: 26px;
+  font-weight: 600;
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- jogadores ---------- */
+
+.jogadores { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+
+.jogador {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--fundo);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+}
+
+.jogador .ponto {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--cinza);
+  flex: 0 0 auto;
+}
+.jogador.online .ponto { background: var(--verde); box-shadow: 0 0 0 3px rgba(67, 181, 129, 0.18); }
+
+.jogador .nome { font-weight: 600; }
+.jogador .detalhe { font-size: 12px; color: var(--texto-fraco); }
+
+/* ---------- feed ---------- */
+
+ul.feed { list-style: none; margin: 0; padding: 0; }
+
+ul.feed li {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--borda);
+}
+ul.feed li:last-child { border-bottom: none; }
+
+ul.feed li.novo { animation: entrar 0.5s ease-out; }
+
+@keyframes entrar {
+  from { background: rgba(200, 151, 63, 0.14); }
+  to   { background: transparent; }
+}
+
+.hora {
+  color: var(--texto-fraco);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  flex: 0 0 auto;
+  min-width: 118px;
+}
+
+.etiqueta {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--borda);
+  color: var(--texto-fraco);
+  flex: 0 0 auto;
+}
+.etiqueta.entrou { color: var(--verde); border-color: rgba(67, 181, 129, 0.4); }
+.etiqueta.saiu { color: var(--cinza); }
+.etiqueta.morreu { color: var(--vermelho); border-color: rgba(231, 76, 60, 0.4); }
+.etiqueta.mensagem { color: #8b93f7; border-color: rgba(88, 101, 242, 0.4); }
+.etiqueta.servidor_pronto { color: var(--amarelo); border-color: rgba(241, 196, 15, 0.35); }
+
+.descricao { flex: 1; word-break: break-word; }
+.descricao .quem { font-weight: 600; }
+.descricao .fala { color: var(--texto-fraco); font-style: italic; }
+
+/* ---------- formulários ---------- */
+
+label { display: block; font-size: 13px; color: var(--texto-fraco); margin-bottom: 6px; }
+
+input[type="text"], input[type="email"], input[type="password"], select {
+  width: 100%;
+  padding: 9px 11px;
+  background: var(--fundo);
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  color: var(--texto);
+  font: inherit;
+}
+
+input:focus, select:focus { outline: 2px solid rgba(200, 151, 63, 0.45); outline-offset: 0; }
+
+.campo { margin-bottom: 14px; }
+.linha { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+
+button {
+  padding: 9px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--borda);
+  background: var(--fundo);
+  color: var(--texto);
+  font: inherit;
+  cursor: pointer;
+}
+button:hover { border-color: var(--bronze); }
+button.primario { background: var(--bronze); border-color: var(--bronze); color: #1a1206; font-weight: 600; }
+button.primario:hover { filter: brightness(1.08); }
+button.perigo { color: var(--vermelho); }
+button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.acoes { display: flex; gap: 10px; align-items: center; margin-top: 8px; }
+
+/* ---------- tabela ---------- */
+
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--borda); font-size: 14px; }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--texto-fraco); }
+tr:last-child td { border-bottom: none; }
+
+/* ---------- avisos ---------- */
+
+.aviso {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--borda);
+  margin-bottom: 14px;
+  font-size: 14px;
+}
+.aviso.erro { border-color: rgba(231, 76, 60, 0.5); background: rgba(231, 76, 60, 0.1); }
+.aviso.ok { border-color: rgba(67, 181, 129, 0.5); background: rgba(67, 181, 129, 0.1); }
+.aviso[hidden] { display: none; }
+
+.selo {
+  font-size: 12px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--borda);
+  color: var(--texto-fraco);
+}
+.selo.ligado { color: var(--verde); border-color: rgba(67, 181, 129, 0.45); }
+.selo.desligado { color: var(--cinza); }
+
+.vazio { color: var(--texto-fraco); padding: 18px; text-align: center; }
+
+/* ---------- logs ---------- */
+
+.logs {
+  font-family: "Cascadia Mono", Consolas, "Liberation Mono", monospace;
+  font-size: 12.5px;
+  max-height: 480px;
+  overflow-y: auto;
+  background: #0e1117;
+}
+.logs .linha-log { display: flex; gap: 10px; padding: 3px 14px; border-bottom: 1px solid rgba(42, 48, 64, 0.5); }
+.logs .nivel { flex: 0 0 auto; width: 48px; font-weight: 600; }
+.logs .nivel.INFO { color: #6ea8fe; }
+.logs .nivel.WARN { color: var(--amarelo); }
+.logs .nivel.ERROR { color: var(--vermelho); }
+.logs .nivel.DEBUG { color: var(--texto-fraco); }
+.logs .msg { flex: 1; word-break: break-word; }
+.logs .attrs { color: var(--texto-fraco); }
+
+/* ---------- login ---------- */
+
+.tela-login {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.caixa-login {
+  width: 100%;
+  max-width: 380px;
+  background: var(--fundo-alto);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra);
+  padding: 28px;
+}
+.caixa-login h1 { margin: 0 0 4px; font-size: 20px; }
+.caixa-login p.sub { margin: 0 0 22px; color: var(--texto-fraco); font-size: 14px; }
+
+@media (max-width: 640px) {
+  main { padding: 14px; }
+  .hora { min-width: 0; }
+  header.topo { flex-wrap: wrap; gap: 8px; padding: 12px 14px; }
+}
